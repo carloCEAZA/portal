@@ -64,40 +64,43 @@ class ZVC {
         headers.append('pragma', 'no-cache');
         headers.append('cache-control', 'no-cache');
 
-        let pHtml = fetch(dir + "/" + componentName + ".html", {headers:headers});
-        let pJs = fetch(dir + "/" + componentName + ".js", {headers:headers});
-        try {
-            let [resHtml, resJS] = await Promise.all([pHtml, pJs]);
-            if (!resHtml.ok) {
-                console.error("[" + resHtml.status + ": " + resHtml.statusText + "] -> " + dir + "/" + componentName + ".html")
-                return;
-            }
-            if (!resJS.ok) {
-                console.error("[" + resJS.status + ": " + resJS.statusText + "] -> " + dir + "/" + componentName + ".js")
-                return;
-            }
-            let [html, js] = await Promise.all([resHtml.text(), resJS.text()])
-            ZVC.lastExportedClass = null;
+        if(componentName !== 'Default'){
+    
+            let pHtml = fetch(dir + "/" + componentName + ".html", {headers:headers});
+            let pJs = fetch(dir + "/" + componentName + ".js", {headers:headers});
             try {
-                eval(js);
+                let [resHtml, resJS] = await Promise.all([pHtml, pJs]);
+                if (!resHtml.ok) {
+                    console.error("[" + resHtml.status + ": " + resHtml.statusText + "] -> " + dir + "/" + componentName + ".html")
+                    return;
+                }
+                if (!resJS.ok) {
+                    console.error("[" + resJS.status + ": " + resJS.statusText + "] -> " + dir + "/" + componentName + ".js")
+                    return;
+                }
+                let [html, js] = await Promise.all([resHtml.text(), resJS.text()])
+                ZVC.lastExportedClass = null;
+                try {
+                    eval(js);
+                } catch(error) {
+                    console.error("Error loading controller:" + dir + "/" + componentName + ".js");                
+                    console.error(error);
+                    console.log(js);
+                    console.trace(error);
+                    throw error;
+                }
+                let controllerClass = ZVC.lastExportedClass;
+                if (!controllerClass) throw "No ZVC.export(ControllerClass) at the end of controller file";
+                let zId = ZVC.nextZId();
+                if (ZVC.options.htmlPreprocessor) html = ZVC.options.htmlPreprocessor(html);
+                domElement.innerHTML = ZVC.parseHTML(html, {zId:zId});
+                let controller = new (controllerClass)(domElement, parentController, dir)
+                controller.zId = zId;
+                return controller;
             } catch(error) {
-                console.error("Error loading controller:" + dir + "/" + componentName + ".js");                
-                console.error(error);
-                console.log(js);
                 console.trace(error);
                 throw error;
             }
-            let controllerClass = ZVC.lastExportedClass;
-            if (!controllerClass) throw "No ZVC.export(ControllerClass) at the end of controller file";
-            let zId = ZVC.nextZId();
-            if (ZVC.options.htmlPreprocessor) html = ZVC.options.htmlPreprocessor(html);
-            domElement.innerHTML = ZVC.parseHTML(html, {zId:zId});
-            let controller = new (controllerClass)(domElement, parentController, dir)
-            controller.zId = zId;
-            return controller;
-        } catch(error) {
-            console.trace(error);
-            throw error;
         }
     }
     static parseHTML(html, vars) {

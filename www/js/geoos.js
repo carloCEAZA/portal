@@ -22,7 +22,7 @@ class GEOOS {
         this.scalesFactory = new ScalesFactory();
         await this.scalesFactory.init();
         console.log("geoos-init-3");
-        this.events.on("map", "click", async p => await this.unselectObject())
+        this.events.on("map", "click", async p => await this.unselectObject())
         await this.inicializaPlugins();
         console.log("geoos-init-4");
     }
@@ -116,10 +116,13 @@ class GEOOS {
         return new Promise((resolve, reject) => {
             let nPending = 0;        
             this.geoServers = [];
-            for (let i=0; i<this.config.geoServers.length; i++) {            
-                let url = this.config.geoServers[i];
-                nPending++;
-                this.getGeoServerMetadata(url)
+            if(this.config.geoServers.length < 1){
+                console.warn("no hay geoServers definidos.");
+            } else {
+                for (let i=0; i<this.config.geoServers.length; i++) {            
+                    let url = this.config.geoServers[i];
+                    nPending++;
+                    this.getGeoServerMetadata(url)
                     .then(metadata => {
                         metadata.url = url;
                         this.geoServers.push(metadata);
@@ -127,7 +130,7 @@ class GEOOS {
                             this.finishBuildMetadata();
                             resolve();
                         }
-                    })            
+                    })
                     .catch(err => {
                         console.error(err);
                         if (--nPending <= 0) {
@@ -135,31 +138,37 @@ class GEOOS {
                             resolve();
                         }
                     })
+                }    
             }
             this.zRepoServers = [];
-            for (let i=0; i<this.config.zRepoServers.length; i++) {            
-                let url = this.config.zRepoServers[i].url;
-                let token = this.config.zRepoServers[i].token;
-                nPending++;
-                this.getZRepoMetadata(url, token)
-                    .then(metadata => {
-                        metadata.url = url;
-                        metadata.token = token;
-                        this.zRepoServers.push(metadata);
-                        if (--nPending <= 0) {
-                            this.finishBuildMetadata()
-                                .then(_ => resolve()).catch(err => reject(err))
-                            
-                        }
-                    })            
-                    .catch(err => {
-                        console.error(err);
-                        if (--nPending <= 0) {
-                            this.finishBuildMetadata()
-                                .then(_ => resolve()).catch(err => reject(err))
-                        }
-                    })
+            if(this.config.zRepoServers.length < 1){
+                console.warn("no hay servidores de zRepo definidos.");
+            } else {
+                for (let i=0; i<this.config.zRepoServers.length; i++) {            
+                    let url = this.config.zRepoServers[i].url;
+                    let token = this.config.zRepoServers[i].token;
+                    nPending++;
+                    this.getZRepoMetadata(url, token)
+                        .then(metadata => {
+                            metadata.url = url;
+                            metadata.token = token;
+                            this.zRepoServers.push(metadata);
+                            if (--nPending <= 0) {
+                                this.finishBuildMetadata()
+                                    .then(_ => resolve()).catch(err => reject(err))
+                                
+                            }
+                        })            
+                        .catch(err => {
+                            console.error(err);
+                            if (--nPending <= 0) {
+                                this.finishBuildMetadata()
+                                    .then(_ => resolve()).catch(err => reject(err))
+                            }
+                        })
+                }
             }
+
             if (!nPending) {
                 this.finishBuildMetadata();
                 resolve();
@@ -806,7 +815,7 @@ class GEOOS {
     }
     getTool(id) {
         let g = this.getActiveGroup();
-        return g.tools.find(t => (t.id == id));
+        return g.tools.find(t => (t.id == id));
     }
     getSelectedTool() {
         let g = this.getActiveGroup();
@@ -821,12 +830,12 @@ class GEOOS {
     }
     async removeTool(id) {
         let g = this.getActiveGroup();
-        let idxOld = g.tools.findIndex(t => t.id == id);
+        let idxOld = g.tools.findIndex(t => t.id == id);
         if (idxOld < 0) throw "Can't remove tool " + id + ". Not found";
         let oldTool = this.getTool(id);
         let newToolId = null;
-        let idxNew = g.tools.findIndex(t => t.id != id);
-        if (idxNew >= 0) {
+        let idxNew = g.tools.findIndex(t => t.id != id);
+        if (idxNew >= 0) {
             newToolId = g.tools[idxNew].id;
         }
         await this.selectTool(newToolId);
@@ -867,7 +876,7 @@ class GEOOS {
         return ret;
     }
 
-    get plugins() {return Object.keys(this._plugins).map(code => (this._plugins(code)))}
+    get plugins() {return Object.keys(this._plugins).map(code => (this._plugins(code)))}
     getPlugin(code) {return this._plugins[code]}
 
     async inicializaPlugins() {
